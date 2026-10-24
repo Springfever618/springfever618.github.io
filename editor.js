@@ -127,7 +127,8 @@
   const serialize = () => {
     const root = document.documentElement.cloneNode(true);
     root.removeAttribute("data-theme");
-    root.querySelectorAll("[data-editor-ui]").forEach(e => e.remove());
+    root.querySelectorAll("[data-editor-ui], [data-runtime]").forEach(e => e.remove());
+    root.querySelectorAll("nav a.active").forEach(e => { e.classList.remove("active"); if (!e.className) e.removeAttribute("class"); });
     root.querySelectorAll("[contenteditable]").forEach(e => { e.removeAttribute("contenteditable"); e.removeAttribute("spellcheck"); });
     root.querySelectorAll("img[data-ed-src]").forEach(i => { i.setAttribute("src", i.dataset.edSrc); i.removeAttribute("data-ed-src"); });
     root.querySelector("body")?.classList.remove("ed-on");
