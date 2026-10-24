@@ -89,6 +89,8 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 .work-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .work-imgs img { width: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 8px; background: #000; display: block; }
 .work-text p { margin: 0 0 10px; }
+.pub-note { margin: -4px 0 8px; font-size: 14px; }
+.pubs strong { font-weight: 600; }
 .contact-line { font-size: 17px; }
 footer { text-align: center; color: var(--muted); font-size: 13px; padding: 48px 16px; border-top: 1px solid var(--line); margin-top: 48px; }
 
