@@ -113,9 +113,14 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 .item .no { color: var(--accent); font-size: 12px; font-weight: 600; }
 
 .work { display: grid; grid-template-columns: 3fr 2fr; gap: 28px; align-items: center; margin: 8px 0 32px; }
-.work-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.work-imgs img { width: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 8px; background: #000; display: block; }
-.work-imgs > img:only-of-type { grid-column: 1 / -1; aspect-ratio: auto; }
+/* 图片区是 12 列网格：默认每张占一半（一行两张），网页编辑里可设 data-span 为 3/4/6/12（一行四张/三张/两张/一张） */
+.work-imgs { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; }
+.work-imgs img { grid-column: span 6; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 8px; background: #000; display: block; }
+.work-imgs > img:only-of-type, .work-imgs > img[data-span="12"] { grid-column: 1 / -1; aspect-ratio: auto; }
+.work-imgs > img[data-span="3"] { grid-column: span 3; }
+.work-imgs > img[data-span="4"] { grid-column: span 4; }
+.work-imgs > img[data-span="6"] { grid-column: span 6; }
+.work.stack { grid-template-columns: 1fr; }
 .work-text p { margin: 0 0 10px; }
 .pub-note { margin: -4px 0 8px; font-size: 14px; }
 .pubs strong { font-weight: 600; }

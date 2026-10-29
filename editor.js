@@ -9,11 +9,11 @@
     ? { edit: "Edit", save: "Save", cancel: "Cancel", history: "History", logout: "Log out", add: "+ Add", addImg: "+ Add image", addPhoto: "+ Add your photo", del: "Delete",
         login: "Paste your GitHub token (only needed once in this browser):", bad: "Token cannot write to the site repository.", saving: "Saving…",
         saved: "Saved. GitHub updates the live page in 1–2 minutes.", fail: "Save failed: ", upl: "Uploading image…", link: "Link address:", sure: "Delete this item?",
-        parent: "Select parent", reset: "Reset position & size", tip: "Long-press the middle of any block to drag it; drag its edges or corners to resize." }
+        parent: "Select parent", reset: "Reset position & size", w4: "4 per row", w3: "3 per row", w2: "2 per row", w1: "Full width", below: "Text below images", side: "Text beside images", tip: "Long-press the middle of any block to drag it; drag its edges or corners to resize." }
     : { edit: "编辑", save: "保存", cancel: "取消", history: "修改记录", logout: "退出登录", add: "＋ 添加", addImg: "＋ 添加图片", addPhoto: "＋ 添加个人照片", del: "删除",
         login: "粘贴你的 GitHub 令牌（这台浏览器只需要一次）：", bad: "这个令牌没有写入网站仓库的权限。", saving: "保存中……",
         saved: "已保存。GitHub 一两分钟后更新线上页面。", fail: "保存失败：", upl: "图片上传中……", link: "链接地址：", sure: "删除这一条？",
-        parent: "选上一层", reset: "复位", tip: "长按任意板块中间可以拖动位置；拖它的边和角可以改大小。" };
+        parent: "选上一层", reset: "复位", w4: "一行4张", w3: "一行3张", w2: "一行2张", w1: "整行", below: "文字放图下面", side: "文字放图右边", tip: "长按任意板块中间可以拖动位置；拖它的边和角可以改大小。" };
   const PAGE = location.pathname.endsWith("en.html") ? "en.html" : "index.html";
   const LOCAL_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && location.search.includes("edtest");
   const token = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
@@ -46,7 +46,7 @@
   .ed-add{margin:8px 0 16px}
   .ed-on img{cursor:pointer}
   .ed-slot{display:flex;align-items:center;justify-content:center;width:100%;min-height:120px;margin:0 0 12px;border:2px dashed var(--accent);border-radius:8px;background:var(--accent-soft);color:var(--accent);font:600 14px/1.4 var(--sans);cursor:pointer}
-  .work-imgs .ed-slot{min-height:0;aspect-ratio:1/1;margin:0}
+  .work-imgs .ed-slot{min-height:0;aspect-ratio:1/1;margin:0;grid-column:span 3}
   .ed-on .avatar:empty,.ed-on .avatar{display:block}.avatar .ed-slot{min-height:0;aspect-ratio:4/5;margin:0}
   .ed-on main img:hover{outline:3px solid var(--accent);outline-offset:-3px}
   .ed-frame{position:fixed;z-index:40;pointer-events:none;outline:1.5px dashed var(--accent);outline-offset:2px}
@@ -55,7 +55,8 @@
   .ed-frame>i[data-d=e]{left:100%;top:50%;cursor:ew-resize}.ed-frame>i[data-d=se]{left:100%;top:100%;cursor:nwse-resize}.ed-frame>i[data-d=s]{left:50%;top:100%;cursor:ns-resize}
   .ed-frame>i[data-d=sw]{left:0;top:100%;cursor:nesw-resize}.ed-frame>i[data-d=w]{left:0;top:50%;cursor:ew-resize}
   .ed-ftools{position:absolute;right:0;bottom:100%;margin-bottom:8px;display:flex;gap:6px;pointer-events:auto;white-space:nowrap}
-  .ed-ftools .ed-btn{padding:4px 10px;font-size:12px}
+  .ed-ftools .ed-btn{padding:4px 10px;font-size:12px}.ed-ftools .ed-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .ed-sorting{opacity:.4}
   .ed-over{outline:3px solid var(--accent)!important;outline-offset:2px;background:var(--accent-soft)}
   .ed-drag,.ed-drag *{user-select:none!important;cursor:grabbing!important}`;
 
@@ -186,11 +187,21 @@
     const r = cur.getBoundingClientRect();
     Object.assign(frame.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" }); frame.hidden = false;
   };
-  const show = el => { cur = el; place(); };
+  const clearFree = el => { VARS.forEach(k => el.style.removeProperty(k)); if (!el.getAttribute("style")) el.removeAttribute("style"); };
+  // 框上方的按钮随选中的东西变：作品图可设一行几张，整个作品可切换文字在右边还是下面
   const tools = document.createElement("div"); tools.className = "ed-ftools";
-  tools.append(btn(T.parent, () => { const p = cur && pickFree(cur.parentElement); if (p) show(p); }),
-    btn(T.reset, () => { if (!cur) return; VARS.forEach(k => cur.style.removeProperty(k)); if (!cur.getAttribute("style")) cur.removeAttribute("style"); place(); }));
+  const setTools = el => {
+    tools.replaceChildren(btn(T.parent, () => { const p = cur && pickFree(cur.parentElement); if (p) show(p); }),
+      btn(T.reset, () => { if (!cur) return; clearFree(cur); delete cur.dataset.span; setTools(cur); place(); }));
+    if (el.matches(".work-imgs > img")) [["3", T.w4], ["4", T.w3], ["6", T.w2], ["12", T.w1]].forEach(([n, l]) =>
+      tools.append(btn(l, () => { el.dataset.span = n; clearFree(el); setTools(el); place(); }, "ed-btn" + ((el.dataset.span || "6") === n ? " on" : ""))));
+    if (el.matches(".work")) tools.append(btn(el.classList.contains("stack") ? T.side : T.below, () => { el.classList.toggle("stack"); if (!el.className.trim()) el.removeAttribute("class"); setTools(el); place(); }));
+  };
+  const show = el => { if (cur !== el) setTools(el); cur = el; place(); };
   frame.append(tools);
+  // 这几类东西长按拖动时是调换先后顺序（真正改排版），其余的才是自由挪位置
+  const SORT = ["main .work-imgs > img", "main ol.list > li", "main .cards > .card", "main section > .work", "main .tags > li"];
+  const kindOf = el => SORT.find(s => el.matches(s));
 
   document.addEventListener("pointermove", e => {
     if (!editing) return;
@@ -198,7 +209,15 @@
     if (op) {
       e.preventDefault();
       const dx = e.clientX - op.x, dy = e.clientY - op.y, el = op.el;
-      if (op.d === "move") { setV(el, "--fx", op.fx + dx); setV(el, "--fy", op.fy + dy); }
+      if (op.d === "sort") {
+        for (const n of document.elementsFromPoint(e.clientX, e.clientY)) {
+          const s = [...el.parentElement.children].find(c => c !== el && c.contains(n) && c.matches(op.kind)); if (!s) continue;
+          const r = s.getBoundingClientRect(), row = r.width < el.parentElement.clientWidth * 0.9;
+          const after = row ? e.clientX > r.left + r.width / 2 : e.clientY > r.top + r.height / 2;
+          el.parentElement.insertBefore(el, after ? s.nextSibling : s); break;
+        }
+      }
+      else if (op.d === "move") { setV(el, "--fx", op.fx + dx); setV(el, "--fy", op.fy + dy); }
       else {
         if (op.d.includes("e")) setV(el, "--fw", Math.max(20, op.w + dx));
         if (op.d.includes("w")) { setV(el, "--fw", Math.max(20, op.w - dx)); setV(el, "--fx", op.fx + Math.min(dx, op.w - 20)); }
@@ -219,13 +238,15 @@
     }
     const el = pickFree(e.target); if (!el) return;
     press = { x: e.clientX, y: e.clientY, t: setTimeout(() => {
-      op = { d: "move", el, x: press.x, y: press.y, fx: num(el, "--fx"), fy: num(el, "--fy") }; press = null;
+      const kind = kindOf(el);
+      op = { d: kind ? "sort" : "move", kind, el, x: press.x, y: press.y, fx: num(el, "--fx"), fy: num(el, "--fy") }; press = null;
+      if (kind) { clearFree(el); el.classList.add("ed-sorting"); }
       show(el); getSelection().removeAllRanges(); document.body.classList.add("ed-drag");
     }, 350) };
   }, true);
   const endOp = () => {
     if (press) { clearTimeout(press.t); press = null; }
-    if (op) { op = null; quietUntil = Date.now() + 300; document.body.classList.remove("ed-drag"); }
+    if (op) { op.el.classList.remove("ed-sorting"); if (!op.el.className.trim()) op.el.removeAttribute("class"); op = null; quietUntil = Date.now() + 300; document.body.classList.remove("ed-drag"); place(); }
   };
   document.addEventListener("pointerup", endOp); document.addEventListener("pointercancel", endOp);
   document.addEventListener("dragstart", e => { if (editing) e.preventDefault(); });
