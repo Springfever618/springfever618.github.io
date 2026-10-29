@@ -8,10 +8,12 @@
   const T = EN
     ? { edit: "Edit", save: "Save", cancel: "Cancel", history: "History", logout: "Log out", add: "+ Add", addImg: "+ Add image", addPhoto: "+ Add your photo", del: "Delete",
         login: "Paste your GitHub token (only needed once in this browser):", bad: "Token cannot write to the site repository.", saving: "Saving…",
-        saved: "Saved. GitHub updates the live page in 1–2 minutes.", fail: "Save failed: ", upl: "Uploading image…", link: "Link address:", sure: "Delete this item?" }
+        saved: "Saved. GitHub updates the live page in 1–2 minutes.", fail: "Save failed: ", upl: "Uploading image…", link: "Link address:", sure: "Delete this item?",
+        parent: "Select parent", reset: "Reset position & size", tip: "Long-press the middle of any block to drag it; drag its edges or corners to resize." }
     : { edit: "编辑", save: "保存", cancel: "取消", history: "修改记录", logout: "退出登录", add: "＋ 添加", addImg: "＋ 添加图片", addPhoto: "＋ 添加个人照片", del: "删除",
         login: "粘贴你的 GitHub 令牌（这台浏览器只需要一次）：", bad: "这个令牌没有写入网站仓库的权限。", saving: "保存中……",
-        saved: "已保存。GitHub 一两分钟后更新线上页面。", fail: "保存失败：", upl: "图片上传中……", link: "链接地址：", sure: "删除这一条？" };
+        saved: "已保存。GitHub 一两分钟后更新线上页面。", fail: "保存失败：", upl: "图片上传中……", link: "链接地址：", sure: "删除这一条？",
+        parent: "选上一层", reset: "复位", tip: "长按任意板块中间可以拖动位置；拖它的边和角可以改大小。" };
   const PAGE = location.pathname.endsWith("en.html") ? "en.html" : "index.html";
   const LOCAL_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && location.search.includes("edtest");
   const token = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
@@ -46,7 +48,15 @@
   .ed-slot{display:flex;align-items:center;justify-content:center;width:100%;min-height:120px;margin:0 0 12px;border:2px dashed var(--accent);border-radius:8px;background:var(--accent-soft);color:var(--accent);font:600 14px/1.4 var(--sans);cursor:pointer}
   .work-imgs .ed-slot{min-height:0;aspect-ratio:1/1;margin:0}
   .ed-on .avatar:empty,.ed-on .avatar{display:block}.avatar .ed-slot{min-height:0;aspect-ratio:4/5;margin:0}
-  .ed-on main img:hover{outline:3px solid var(--accent);outline-offset:-3px}`;
+  .ed-on main img:hover{outline:3px solid var(--accent);outline-offset:-3px}
+  .ed-frame{position:fixed;z-index:40;pointer-events:none;outline:1.5px dashed var(--accent);outline-offset:2px}
+  .ed-frame>i{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;background:var(--surface);border:2px solid var(--accent);border-radius:3px;pointer-events:auto}
+  .ed-frame>i[data-d=nw]{left:0;top:0;cursor:nwse-resize}.ed-frame>i[data-d=n]{left:50%;top:0;cursor:ns-resize}.ed-frame>i[data-d=ne]{left:100%;top:0;cursor:nesw-resize}
+  .ed-frame>i[data-d=e]{left:100%;top:50%;cursor:ew-resize}.ed-frame>i[data-d=se]{left:100%;top:100%;cursor:nwse-resize}.ed-frame>i[data-d=s]{left:50%;top:100%;cursor:ns-resize}
+  .ed-frame>i[data-d=sw]{left:0;top:100%;cursor:nesw-resize}.ed-frame>i[data-d=w]{left:0;top:50%;cursor:ew-resize}
+  .ed-ftools{position:absolute;left:0;bottom:100%;margin-bottom:8px;display:flex;gap:6px;pointer-events:auto;white-space:nowrap}
+  .ed-ftools .ed-btn{padding:4px 10px;font-size:12px}
+  .ed-drag,.ed-drag *{user-select:none!important;cursor:grabbing!important}`;
 
   let editing = false;
   const EDITABLE = "main h1, main h2, main h3, main p, main figcaption, main .tags li, main .status, main .list li > time, main .list li > div";
@@ -117,29 +127,96 @@
   };
   const undecorate = () => {
     document.querySelectorAll("main [data-editor-ui]").forEach(e => e.remove());
-    document.querySelectorAll("main ~ [data-editor-ui], main + [data-editor-ui]").forEach(e => e.remove());
+    document.querySelectorAll("main ~ [data-editor-ui]:not(.ed-bar, .ed-frame, .ed-msg)").forEach(e => e.remove());
     document.querySelectorAll("[contenteditable]").forEach(e => { e.removeAttribute("contenteditable"); e.removeAttribute("spellcheck"); });
   };
 
   document.addEventListener("click", e => {
     if (!editing) return;
+    if (Date.now() < quietUntil) { e.preventDefault(); e.stopImmediatePropagation(); return; }
     const img = e.target.closest("main img"); if (img && !img.closest("#retro")) { e.preventDefault(); uploadInto(img); return; }
     const a = e.target.closest("main a");
     if (a && (e.metaKey || e.ctrlKey || e.altKey)) { e.preventDefault(); const u = prompt(T.link, a.getAttribute("href")); if (u !== null) a.setAttribute("href", u); }
     else if (a) e.preventDefault();
   }, true);
 
-  const serialize = () => {
-    const root = document.documentElement.cloneNode(true);
-    root.removeAttribute("data-theme");
+  // 保存时只替换原文件里 <main>…</main> 这一段；页面其余部分（head、页眉页脚）沿用仓库原文，
+  // 这样浏览器插件往页面里塞的样式和元素不会被存进网站。
+  // —— 自由摆放（10-30）：长按板块中间拖动位置，拖边和角改宽高。
+  // 数值存成行内样式 --fx/--fy/--fw/--fh，由 style.css 在宽屏上生效；手机上自动回到原来的版式。
+  const FREE = "main section > :not(h2), main article > *, main .cards > .card, main .list > li, main .tags > li, main img, main figcaption";
+  const VARS = ["--fx", "--fy", "--fw", "--fh"];
+  const pickFree = el => { const f = el?.closest?.(FREE); return f && !f.closest("#retro, [data-editor-ui]") ? f : null; };
+  const num = (el, k) => parseFloat(el.style.getPropertyValue(k)) || 0;
+  const setV = (el, k, v) => el.style.setProperty(k, Math.round(v) + "px");
+  const frame = document.createElement("div"); frame.className = "ed-frame"; frame.dataset.editorUi = ""; frame.hidden = true;
+  ["nw", "n", "ne", "e", "se", "s", "sw", "w"].forEach(d => { const h = document.createElement("i"); h.dataset.d = d; frame.append(h); });
+  let cur = null, op = null, press = null, quietUntil = 0;
+  const place = () => {
+    if (!cur || !editing || !cur.isConnected || innerWidth <= 720) { frame.hidden = true; return; }
+    const r = cur.getBoundingClientRect();
+    Object.assign(frame.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" }); frame.hidden = false;
+  };
+  const show = el => { cur = el; place(); };
+  const tools = document.createElement("div"); tools.className = "ed-ftools";
+  tools.append(btn(T.parent, () => { const p = cur && pickFree(cur.parentElement); if (p) show(p); }),
+    btn(T.reset, () => { if (!cur) return; VARS.forEach(k => cur.style.removeProperty(k)); if (!cur.getAttribute("style")) cur.removeAttribute("style"); place(); }));
+  frame.append(tools);
+
+  document.addEventListener("pointermove", e => {
+    if (!editing) return;
+    if (press && !op && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) { clearTimeout(press.t); press = null; }
+    if (op) {
+      e.preventDefault();
+      const dx = e.clientX - op.x, dy = e.clientY - op.y, el = op.el;
+      if (op.d === "move") { setV(el, "--fx", op.fx + dx); setV(el, "--fy", op.fy + dy); }
+      else {
+        if (op.d.includes("e")) setV(el, "--fw", Math.max(20, op.w + dx));
+        if (op.d.includes("w")) { setV(el, "--fw", Math.max(20, op.w - dx)); setV(el, "--fx", op.fx + Math.min(dx, op.w - 20)); }
+        if (op.d.includes("s")) setV(el, "--fh", Math.max(20, op.h + dy));
+        if (op.d.includes("n")) { setV(el, "--fh", Math.max(20, op.h - dy)); setV(el, "--fy", op.fy + Math.min(dy, op.h - 20)); }
+      }
+      place(); return;
+    }
+    if (e.target.closest?.(".ed-frame")) return;
+    const f = pickFree(e.target); if (f && f !== cur) show(f);
+  });
+  document.addEventListener("pointerdown", e => {
+    if (!editing || e.button !== 0 || innerWidth <= 720) return;
+    const d = e.target.dataset?.d;
+    if (d && e.target.parentElement === frame && cur) {
+      e.preventDefault(); const r = cur.getBoundingClientRect();
+      op = { d, el: cur, x: e.clientX, y: e.clientY, fx: num(cur, "--fx"), fy: num(cur, "--fy"), w: r.width, h: r.height }; return;
+    }
+    const el = pickFree(e.target); if (!el) return;
+    press = { x: e.clientX, y: e.clientY, t: setTimeout(() => {
+      op = { d: "move", el, x: press.x, y: press.y, fx: num(el, "--fx"), fy: num(el, "--fy") }; press = null;
+      show(el); getSelection().removeAllRanges(); document.body.classList.add("ed-drag");
+    }, 350) };
+  }, true);
+  const endOp = () => {
+    if (press) { clearTimeout(press.t); press = null; }
+    if (op) { op = null; quietUntil = Date.now() + 300; document.body.classList.remove("ed-drag"); }
+  };
+  document.addEventListener("pointerup", endOp); document.addEventListener("pointercancel", endOp);
+  document.addEventListener("dragstart", e => { if (editing) e.preventDefault(); });
+  addEventListener("scroll", place, true); addEventListener("resize", place);
+
+  const serializeMain = () => {
+    const root = document.querySelector("main").cloneNode(true);
     root.querySelectorAll("[data-editor-ui], [data-runtime]").forEach(e => e.remove());
-    root.querySelectorAll("nav a.active").forEach(e => { e.classList.remove("active"); if (!e.className) e.removeAttribute("class"); });
     root.querySelectorAll("[contenteditable]").forEach(e => { e.removeAttribute("contenteditable"); e.removeAttribute("spellcheck"); });
     root.querySelectorAll("img[data-ed-src]").forEach(i => { i.setAttribute("src", i.dataset.edSrc); i.removeAttribute("data-ed-src"); });
-    root.querySelector("body")?.classList.remove("ed-on");
-    if (root.querySelector("body")?.getAttribute("class") === "") root.querySelector("body").removeAttribute("class");
+    root.querySelectorAll("[style=\"\"]").forEach(e => e.removeAttribute("style"));
     const r = root.querySelector("#retro"); if (r) r.innerHTML = "";
-    return "<!doctype html>\n" + root.outerHTML + "\n";
+    return root.outerHTML;
+  };
+  const serialize = async () => {
+    const src = LOCAL_TEST ? await (await fetch(location.pathname, { cache: "no-store" })).text()
+      : decodeURIComponent(escape(atob((await api(`/contents/${PAGE}?ref=${BRANCH}`)).content.replace(/\s/g, ""))));
+    const a = src.indexOf("<main"), b = src.indexOf("</main>");
+    if (a < 0 || b < 0) throw new Error("main not found");
+    return src.slice(0, a) + serializeMain() + src.slice(b + 7);
   };
   window.__siteEditorSerialize = serialize;
 
@@ -147,17 +224,17 @@
   const render = () => {
     bar.replaceChildren();
     if (!editing) {
-      bar.append(btn(T.edit, () => { editing = true; document.body.classList.add("ed-on"); decorate(); render(); }, "pri"));
+      bar.append(btn(T.edit, () => { editing = true; document.body.classList.add("ed-on"); decorate(); render(); if (innerWidth > 720) msg(T.tip, 6000); }, "pri"));
     } else {
       bar.append(
         btn(T.save, async () => {
-          const html = serialize();
-          if (LOCAL_TEST) { console.log(html); msg("（本机测试）" + html.length + " chars"); return; }
           msg(T.saving, 0);
           try {
+            const html = await serialize();
+            if (LOCAL_TEST) { console.log(html); msg("（本机测试）" + html.length + " chars"); return; }
             const when = new Date().toLocaleString("zh-CN", { hour12: false });
             await putFile(PAGE, b64(html), `网页编辑 ${PAGE} ${when}`);
-            editing = false; document.body.classList.remove("ed-on"); undecorate(); render(); msg(T.saved, 6000);
+            editing = false; document.body.classList.remove("ed-on"); undecorate(); place(); render(); msg(T.saved, 6000);
           } catch (e) { msg(T.fail + e.message, 8000); }
         }, "pri"),
         btn(T.cancel, () => location.reload()),
@@ -165,7 +242,7 @@
         btn(T.logout, () => { try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); }));
     }
   };
-  const start = () => { document.head.append(css); document.body.append(bar); render(); };
+  const start = () => { document.head.append(css); document.body.append(bar, frame); render(); };
 
   if (LOCAL_TEST) { start(); return; }
   if (token()) { start(); return; }
