@@ -67,6 +67,9 @@ h1 small { font-family: var(--sans); font-size: .4em; font-weight: 500; color: v
 h1 { font-family: var(--serif); font-size: clamp(30px, 4.5vw, 42px); margin: 8px 0 20px; line-height: 1.15; }
 .lede { font-family: var(--serif); font-size: clamp(18px, 2.2vw, 21px); max-width: 44em; margin: 0 0 16px; }
 .sub { color: var(--muted); max-width: 46em; }
+.avatar { float: right; width: 200px; margin: 0 0 24px 40px; }
+.avatar:empty { display: none; }
+.avatar img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; }
 .tags { list-style: none; padding: 0; margin: 24px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .tags li { background: var(--accent-soft); color: var(--accent); padding: 2px 12px; border-radius: 99px; font-size: 13px; }
 
@@ -111,6 +114,7 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 @media (max-width: 720px) {
   main > section { padding: 36px 16px 72px; }
   main > section.hero { padding-top: 48px; }
+  .avatar { float: none; width: 140px; margin: 0 0 20px; }
   .pager-btn { display: none; }
   .top { gap: 12px; }
   .brand { white-space: nowrap; flex-shrink: 0; }

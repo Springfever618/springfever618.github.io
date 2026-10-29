@@ -6,10 +6,10 @@
   const KEY = "site-editor-token";
   const EN = document.documentElement.lang === "en";
   const T = EN
-    ? { edit: "Edit", save: "Save", cancel: "Cancel", history: "History", logout: "Log out", add: "+ Add", addImg: "+ Add image", del: "Delete",
+    ? { edit: "Edit", save: "Save", cancel: "Cancel", history: "History", logout: "Log out", add: "+ Add", addImg: "+ Add image", addPhoto: "+ Add your photo", del: "Delete",
         login: "Paste your GitHub token (only needed once in this browser):", bad: "Token cannot write to the site repository.", saving: "Saving…",
         saved: "Saved. GitHub updates the live page in 1–2 minutes.", fail: "Save failed: ", upl: "Uploading image…", link: "Link address:", sure: "Delete this item?" }
-    : { edit: "编辑", save: "保存", cancel: "取消", history: "修改记录", logout: "退出登录", add: "＋ 添加", addImg: "＋ 添加图片", del: "删除",
+    : { edit: "编辑", save: "保存", cancel: "取消", history: "修改记录", logout: "退出登录", add: "＋ 添加", addImg: "＋ 添加图片", addPhoto: "＋ 添加个人照片", del: "删除",
         login: "粘贴你的 GitHub 令牌（这台浏览器只需要一次）：", bad: "这个令牌没有写入网站仓库的权限。", saving: "保存中……",
         saved: "已保存。GitHub 一两分钟后更新线上页面。", fail: "保存失败：", upl: "图片上传中……", link: "链接地址：", sure: "删除这一条？" };
   const PAGE = location.pathname.endsWith("en.html") ? "en.html" : "index.html";
@@ -45,6 +45,7 @@
   .ed-on img{cursor:pointer}
   .ed-slot{display:flex;align-items:center;justify-content:center;width:100%;min-height:120px;margin:0 0 12px;border:2px dashed var(--accent);border-radius:8px;background:var(--accent-soft);color:var(--accent);font:600 14px/1.4 var(--sans);cursor:pointer}
   .work-imgs .ed-slot{min-height:0;aspect-ratio:1/1;margin:0}
+  .ed-on .avatar:empty,.ed-on .avatar{display:block}.avatar .ed-slot{min-height:0;aspect-ratio:4/5;margin:0}
   .ed-on main img:hover{outline:3px solid var(--accent);outline-offset:-3px}`;
 
   let editing = false;
@@ -106,6 +107,10 @@
     document.querySelectorAll("main .work-imgs").forEach(box => box.append(btn(T.addImg, async () => {
       const img = Object.assign(document.createElement("img"), { loading: "lazy", alt: "" }); box.querySelector("[data-editor-ui]").before(img); await uploadInto(img);
     }, "ed-slot")));
+    document.querySelectorAll("main .avatar").forEach(box => { if (!box.querySelector("img")) box.append(btn(T.addPhoto, async () => {
+      const img = Object.assign(document.createElement("img"), { alt: document.querySelector("h1")?.firstChild?.textContent.trim() || "" }); box.prepend(img); box.querySelector("[data-editor-ui]")?.remove();
+      await uploadInto(img); if (!img.getAttribute("src")) { img.remove(); undecorate(); decorate(); }
+    }, "ed-slot")); });
     document.querySelectorAll("main .cards > .card").forEach(card => { if (!card.querySelector("img")) card.prepend(btn(T.addImg, async () => {
       const img = Object.assign(document.createElement("img"), { className: "card-img", loading: "lazy", alt: "" }); card.prepend(img); await uploadInto(img);
     }, "ed-slot")); });
