@@ -54,8 +54,9 @@
   .ed-frame>i[data-d=nw]{left:0;top:0;cursor:nwse-resize}.ed-frame>i[data-d=n]{left:50%;top:0;cursor:ns-resize}.ed-frame>i[data-d=ne]{left:100%;top:0;cursor:nesw-resize}
   .ed-frame>i[data-d=e]{left:100%;top:50%;cursor:ew-resize}.ed-frame>i[data-d=se]{left:100%;top:100%;cursor:nwse-resize}.ed-frame>i[data-d=s]{left:50%;top:100%;cursor:ns-resize}
   .ed-frame>i[data-d=sw]{left:0;top:100%;cursor:nesw-resize}.ed-frame>i[data-d=w]{left:0;top:50%;cursor:ew-resize}
-  .ed-ftools{position:absolute;left:0;bottom:100%;margin-bottom:8px;display:flex;gap:6px;pointer-events:auto;white-space:nowrap}
+  .ed-ftools{position:absolute;right:0;bottom:100%;margin-bottom:8px;display:flex;gap:6px;pointer-events:auto;white-space:nowrap}
   .ed-ftools .ed-btn{padding:4px 10px;font-size:12px}
+  .ed-over{outline:3px solid var(--accent)!important;outline-offset:2px;background:var(--accent-soft)}
   .ed-drag,.ed-drag *{user-select:none!important;cursor:grabbing!important}`;
 
   let editing = false;
@@ -82,12 +83,12 @@
     };
     img.onerror = rej; img.src = URL.createObjectURL(file);
   });
-  const pickImage = () => new Promise(res => {
-    const f = Object.assign(document.createElement("input"), { type: "file", accept: "image/*" });
-    f.onchange = () => res(f.files[0]); f.click();
+  const pickImages = (multiple = false) => new Promise(res => {
+    const f = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple });
+    f.onchange = () => res([...f.files]); f.click();
   });
-  const uploadInto = async img => {
-    const file = await pickImage(); if (!file) return;
+  const uploadInto = async (img, file) => {
+    if (!file) [file] = await pickImages(); if (!file) return;
     const data = await compress(file);
     img.src = data;
     const name = file.name.replace(/\.[^.]+$/, "").replace(/[^\w-]+/g, "-").slice(0, 40) || "img";
@@ -99,6 +100,36 @@
     try { await putFile(path, data.split(",")[1], `上传图片 ${path}`); msg("✓ " + path); }
     catch (e) { msg(T.fail + e.message, 8000); }
   };
+
+  // 往作品图框里加一张或多张图，按顺序逐张上传
+  const addImgs = async (box, files) => {
+    for (const file of files) {
+      const img = Object.assign(document.createElement("img"), { loading: "lazy", alt: "" });
+      (box.querySelector(".ed-slot") ? box.querySelector(".ed-slot").before(img) : box.append(img));
+      await uploadInto(img, file); if (!img.getAttribute("src")) img.remove();
+    }
+  };
+  // 从访达拖图片进来：拖到图片上＝换图，拖到作品图框或“添加图片”框里＝加图（可多张）
+  const dropTarget = el => el?.closest?.("main .work-imgs, main .avatar, main .cards > .card, main img");
+  let overEl = null;
+  const over = el => { if (overEl === el) return; overEl?.classList.remove("ed-over"); overEl = el; el?.classList.add("ed-over"); };
+  document.addEventListener("dragover", e => {
+    if (!editing || !e.dataTransfer?.types.includes("Files")) return;
+    e.preventDefault(); const t = dropTarget(e.target); e.dataTransfer.dropEffect = t ? "copy" : "none"; over(t);
+  });
+  document.addEventListener("dragleave", e => { if (!e.relatedTarget) over(null); });
+  document.addEventListener("drop", async e => {
+    if (!editing || !e.dataTransfer?.files.length) return;
+    e.preventDefault(); const t = dropTarget(e.target); over(null); if (!t) return;
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/")); if (!files.length) return;
+    const box = t.closest(".work-imgs");
+    if (t.tagName === "IMG" && !t.closest("#retro")) { await uploadInto(t, files.shift()); if (box) await addImgs(box, files); return; }
+    if (box) return addImgs(box, files);
+    const slot = t.querySelector(".ed-slot"); if (!slot) return;
+    const img = Object.assign(document.createElement("img"), { alt: t.matches(".avatar") ? document.querySelector("h1")?.firstChild?.textContent.trim() || "" : "" });
+    if (t.matches(".card")) img.className = "card-img";
+    slot.replaceWith(img); await uploadInto(img, files[0]); if (!img.getAttribute("src")) { img.remove(); undecorate(); decorate(); }
+  });
 
   const decorate = () => {
     document.querySelectorAll(EDITABLE).forEach(el => { if (!el.closest("#retro, .ed-bar")) { el.contentEditable = "true"; el.spellcheck = false; } });
@@ -114,9 +145,7 @@
       const c = w.cloneNode(true); c.querySelectorAll("[data-editor-ui]").forEach(e => e.remove());
       w.before(c); undecorate(); decorate(); c.scrollIntoView({ block: "center" });
     }, "ed-btn ed-add")); });
-    document.querySelectorAll("main .work-imgs").forEach(box => box.append(btn(T.addImg, async () => {
-      const img = Object.assign(document.createElement("img"), { loading: "lazy", alt: "" }); box.querySelector("[data-editor-ui]").before(img); await uploadInto(img);
-    }, "ed-slot")));
+    document.querySelectorAll("main .work-imgs").forEach(box => box.append(btn(T.addImg, async () => addImgs(box, await pickImages(true)), "ed-slot")));
     document.querySelectorAll("main .avatar").forEach(box => { if (!box.querySelector("img")) box.append(btn(T.addPhoto, async () => {
       const img = Object.assign(document.createElement("img"), { alt: document.querySelector("h1")?.firstChild?.textContent.trim() || "" }); box.prepend(img); box.querySelector("[data-editor-ui]")?.remove();
       await uploadInto(img); if (!img.getAttribute("src")) { img.remove(); undecorate(); decorate(); }

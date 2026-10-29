@@ -115,6 +115,7 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 .work { display: grid; grid-template-columns: 3fr 2fr; gap: 28px; align-items: center; margin: 8px 0 32px; }
 .work-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .work-imgs img { width: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 8px; background: #000; display: block; }
+.work-imgs > img:only-of-type { grid-column: 1 / -1; aspect-ratio: auto; }
 .work-text p { margin: 0 0 10px; }
 .pub-note { margin: -4px 0 8px; font-size: 14px; }
 .pubs strong { font-weight: 600; }

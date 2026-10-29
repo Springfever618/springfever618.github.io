@@ -66,8 +66,8 @@ pager.addEventListener("scroll", () => { clearTimeout(markTimer); markTimer = se
 document.addEventListener("click", e => {
   const a = e.target.closest("a[href^='#']"); if (!a) return;
   const h = a.getAttribute("href"), i = h === "#" ? 0 : pages.findIndex(p => "#" + p.id === h);
-  if (i < 0 || document.body.classList.contains("ed-on")) return;
-  e.preventDefault(); go(i);
+  if (i < 0 || (document.body.classList.contains("ed-on") && a.closest("main"))) return;
+  e.preventDefault(); go(i, !a.closest("nav")); // 顶部导航直接切页，箭头和圆点保留滑动
 });
 document.addEventListener("keydown", e => {
   const t = e.target;
