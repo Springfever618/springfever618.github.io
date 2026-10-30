@@ -58,9 +58,6 @@ nav a.active { color: var(--text); font-weight: 600; }
 .pager-btn:hover { opacity: 1; }
 .pager-btn[disabled] { opacity: .2; cursor: default; }
 .pager-prev { left: 16px; } .pager-next { right: 16px; }
-.pager-dots { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; display: flex; gap: 8px; }
-.pager-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: var(--line); cursor: pointer; }
-.pager-dots button.on { background: var(--text); }
 .footnote { margin-top: 48px; color: var(--muted); font-size: 13px; }
 .eyebrow { color: var(--accent); font-size: 14px; letter-spacing: .08em; margin: 0; }
 h1 small { font-family: var(--sans); font-size: .4em; font-weight: 500; color: var(--muted); margin-left: .3em; }

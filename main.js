@@ -49,15 +49,12 @@ const mkBtn = (cls, text, label, fn) => {
 };
 const prev = mkBtn("pager-btn pager-prev", "‹", EN ? "Previous" : "上一页", () => go(current() - 1));
 const next = mkBtn("pager-btn pager-next", "›", EN ? "Next" : "下一页", () => go(current() + 1));
-const dots = runtime(Object.assign(document.createElement("div"), { className: "pager-dots" }));
-pages.forEach((p, i) => dots.append(mkBtn("", "", p.querySelector("h2, h1")?.textContent.trim() || p.id, () => go(i))));
-document.body.append(prev, next, dots);
+document.body.append(prev, next);
 
 const mark = () => {
   const i = current(), id = pages[i]?.id;
   navLinks.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
   const act = navLinks.find(a => a.classList.contains("active")); if (act) act.parentElement.scrollTo({ left: act.offsetLeft - 40, behavior: "smooth" });
-  [...dots.children].forEach((d, k) => d.classList.toggle("on", k === i));
   prev.disabled = i === 0; next.disabled = i === pages.length - 1;
   if (id && location.hash !== "#" + id && location.hash !== "#edit") history.replaceState(null, "", "#" + id);
 };
