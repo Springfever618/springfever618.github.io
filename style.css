@@ -121,6 +121,7 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 .work-imgs > img[data-span="3"] { grid-column: span 3; }
 .work-imgs > img[data-span="4"] { grid-column: span 4; }
 .work-imgs > img[data-span="6"] { grid-column: span 6; }
+.work-imgs.fill img { aspect-ratio: var(--ar, 1 / 1); object-fit: cover; background: none; }
 .work.stack { grid-template-columns: 1fr; }
 .work-text p { margin: 0 0 10px; }
 .pub-note { margin: -4px 0 8px; font-size: 14px; }
