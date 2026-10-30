@@ -100,6 +100,7 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 .list li:last-child { border-bottom: 1px solid var(--line); }
 .list time { color: var(--accent); font-weight: 600; white-space: nowrap; }
 .video { margin-top: 12px; max-width: 640px; }
+.video-link { display: inline-block; margin-top: 8px; font-size: 13px; }
 .video video { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 562; border-radius: 8px; background: #000; }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 24px; }
@@ -145,3 +146,14 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 }
 
 .sub-title { margin: 40px 0 12px; font-size: 18px; color: var(--muted); }
+
+/* 开场 3D 电视机（intro.js） */
+html.intro, html.intro body { overflow: hidden; }
+html.intro body > *:not(.intro-stage) { visibility: hidden; }
+.intro-stage { position: fixed; inset: 0; z-index: 100; background: radial-gradient(ellipse at 50% 42%, #2a2a2a 0%, #101010 62%, #0a0a0a 100%); transition: opacity .5s ease; }
+.intro-stage.off { opacity: 0; pointer-events: none; }
+.intro-stage canvas { position: absolute; inset: 0; display: block; outline: none; cursor: grab; touch-action: none; }
+.intro-hint { position: absolute; left: 16px; right: 16px; bottom: 28px; margin: 0; text-align: center; color: #a8a8a4; font-size: 13px; letter-spacing: .04em; pointer-events: none; transition: opacity .3s; }
+.intro-skip { position: absolute; top: 20px; right: 20px; padding: 8px 16px; font: 13px/1 var(--sans); color: #d8d8d4; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.22); border-radius: 99px; cursor: pointer; transition: opacity .3s; }
+.intro-skip:hover { background: rgba(255,255,255,.16); }
+.intro-hint.off, .intro-skip.off { opacity: 0; pointer-events: none; }
