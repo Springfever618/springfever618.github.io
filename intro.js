@@ -1,4 +1,4 @@
-// 开场：3D 老电视机（10-30）。可拖动旋转、缩放，点击电视推进屏幕后进入主页。
+// 开场：白底页面上一台小小的 3D 老电视（10-30）。朝向跟随鼠标，可拖动旋转、缩放，点击电视推进屏幕后进入主页。
 // 同一浏览器只自动播放一次；点左上角名字可以回来看；带 #research 这类直达链接时不播放。
 // 现在的电视是代码搭的，以后有混元模型时只替换 buildTV()。3D 库只在开场显示时才加载。
 (() => {
@@ -152,8 +152,8 @@
     // 地面上的柔和阴影
     const sc = document.createElement("canvas"); sc.width = sc.height = 256;
     const sg = sc.getContext("2d"), gr = sg.createRadialGradient(128, 128, 10, 128, 128, 128);
-    gr.addColorStop(0, "rgba(255,255,255,.2)"); gr.addColorStop(1, "rgba(255,255,255,0)"); sg.fillStyle = gr; sg.fillRect(0, 0, 256, 256);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
+    gr.addColorStop(0, "rgba(0,0,0,.28)"); gr.addColorStop(1, "rgba(0,0,0,0)"); sg.fillStyle = gr; sg.fillRect(0, 0, 256, 256);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
     floor.rotation.x = -Math.PI / 2; floor.position.set(0, -1.78, 0); scene.add(floor);
 
     const camera = new THREE.PerspectiveCamera(32, 1, .1, 60);
@@ -161,19 +161,19 @@
     controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = .07;
     controls.minPolarAngle = .75; controls.maxPolarAngle = 1.75;
     controls.target.set(0, .05, 0);
-    controls.autoRotate = !calm; controls.autoRotateSpeed = .7;
 
     const fit = () => {
       const w = stage.clientWidth, h = stage.clientHeight;
       renderer.setSize(w, h, false); canvas.style.width = "100%"; canvas.style.height = "100%";
       camera.aspect = w / h; camera.updateProjectionMatrix();
-      const needW = 3.0 / (Math.tan(camera.fov * Math.PI / 360) * camera.aspect), needH = 2.35 / Math.tan(camera.fov * Math.PI / 360);
-      const dist = Math.max(needW, needH) + 1.2;
-      controls.minDistance = dist * .55; controls.maxDistance = dist * 1.7;
+      // 电视只占画面一小块：电脑上约 26% 宽，手机上约 58% 宽，同时不超过 34% 高
+      const tan = Math.tan(camera.fov * Math.PI / 360);
+      const dist = Math.max(4.6 / ((w < 720 ? .58 : .26) * 2 * tan * camera.aspect), 4.2 / (.34 * 2 * tan));
+      controls.minDistance = dist * .55; controls.maxDistance = dist * 1.6;
       return dist;
     };
     const dist = fit();
-    camera.position.set(-dist * .38, dist * .14, dist * .91);
+    camera.position.set(0, dist * .06, dist);
     addEventListener("resize", fit);
 
     // 点击电视：按下和松开几乎没移动才算点击，拖动只是旋转
@@ -183,21 +183,27 @@
       return ray.intersectObject(tv, true).length > 0;
     };
     let down = null, entering = 0, enterStart = 0, from = null;
-    const stopSpin = () => { controls.autoRotate = false; };
-    const onDown = e => { down = { x: e.clientX, y: e.clientY }; stopSpin(); };
+    // 朝向跟随鼠标：屏幕转向鼠标所在的方向；手机没有鼠标，就轻轻摆动
+    const look = { x: 0, y: 0, mouse: false };
+    const onLook = e => {
+      if (e.pointerType !== "mouse" || e.buttons) return;
+      look.mouse = true; look.x = e.clientX / innerWidth * 2 - 1; look.y = e.clientY / innerHeight * 2 - 1;
+    };
+    addEventListener("pointermove", onLook);
+    const onDown = e => { down = { x: e.clientX, y: e.clientY }; };
     const onUp = e => {
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && hitTV(e)) enter();
       down = null;
     };
     const onMove = e => { if (!entering && e.pointerType === "mouse" && !e.buttons) canvas.style.cursor = hitTV(e) ? "pointer" : "grab"; };
     const onKey = e => { if (e.key === "Escape") finish(); else if ((e.key === "Enter" || e.key === " ") && document.activeElement === canvas) { e.preventDefault(); enter(); } };
-    canvas.addEventListener("pointerdown", onDown); addEventListener("pointerup", onUp); canvas.addEventListener("pointermove", onMove); canvas.addEventListener("wheel", stopSpin, { passive: true }); addEventListener("keydown", onKey);
+    canvas.addEventListener("pointerdown", onDown); addEventListener("pointerup", onUp); canvas.addEventListener("pointermove", onMove); addEventListener("keydown", onKey);
 
     function enter() {
       if (entering) return;
       if (calm) { finish(); return; }
       entering = 1; enterStart = performance.now(); hint.classList.add("off"); skip.classList.add("off");
-      controls.enabled = false; controls.autoRotate = false; canvas.style.cursor = "default";
+      controls.enabled = false; canvas.style.cursor = "default";
       from = { pos: camera.position.clone(), tgt: controls.target.clone() };
     }
     const ENTER_MS = 1150, toPos = new THREE.Vector3(-.62, 0, 2.15), toTgt = new THREE.Vector3(-.62, 0, 1);
@@ -206,6 +212,11 @@
     let raf = 0;
     const loop = now => {
       raf = requestAnimationFrame(loop);
+      if (entering) { tv.rotation.y *= .86; tv.rotation.x *= .86; }
+      else {
+        const ty = look.mouse ? look.x * .65 : calm ? 0 : Math.sin(now / 1900) * .28, tx = look.mouse ? look.y * .32 : 0;
+        tv.rotation.y += (ty - tv.rotation.y) * .08; tv.rotation.x += (tx - tv.rotation.x) * .08;
+      }
       if (entering) {
         const t = Math.min(1, (now - enterStart) / ENTER_MS), k = ease(t);
         camera.position.lerpVectors(from.pos, toPos, k);
@@ -221,7 +232,7 @@
 
     cleanup = () => {
       cancelAnimationFrame(raf);
-      removeEventListener("resize", fit); removeEventListener("pointerup", onUp); removeEventListener("keydown", onKey);
+      removeEventListener("resize", fit); removeEventListener("pointerup", onUp); removeEventListener("keydown", onKey); removeEventListener("pointermove", onLook);
       controls.dispose(); pmrem.dispose();
       scene.traverse(o => { o.geometry?.dispose(); o.material?.map?.dispose?.(); o.material?.dispose?.(); });
       renderer.dispose(); renderer.forceContextLoss?.();
