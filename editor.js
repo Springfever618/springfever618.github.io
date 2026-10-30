@@ -9,11 +9,11 @@
     ? { edit: "Edit", save: "Save", cancel: "Cancel", history: "History", logout: "Log out", add: "+ Add", addImg: "+ Add image", addPhoto: "+ Add your photo", del: "Delete",
         login: "Paste your GitHub token (only needed once in this browser):", bad: "Token cannot write to the site repository.", saving: "Saving…",
         saved: "Saved. GitHub updates the live page in 1–2 minutes.", fail: "Save failed: ", upl: "Uploading image…", link: "Link address:", sure: "Delete this item?",
-        parent: "Select parent", reset: "Reset position & size", w4: "4 per row", w3: "3 per row", w2: "2 per row", w1: "Full width", below: "Text below images", side: "Text beside images", tip: "Long-press the middle of any block to drag it; drag its edges or corners to resize." }
+        translated: "This page is being translated by the browser. Show the original first, then save. Nothing was saved.", parent: "Select parent", reset: "Reset position & size", w4: "4 per row", w3: "3 per row", w2: "2 per row", w1: "Full width", below: "Text below images", side: "Text beside images", tip: "Long-press the middle of any block to drag it; drag its edges or corners to resize." }
     : { edit: "编辑", save: "保存", cancel: "取消", history: "修改记录", logout: "退出登录", add: "＋ 添加", addImg: "＋ 添加图片", addPhoto: "＋ 添加个人照片", del: "删除",
         login: "粘贴你的 GitHub 令牌（这台浏览器只需要一次）：", bad: "这个令牌没有写入网站仓库的权限。", saving: "保存中……",
         saved: "已保存。GitHub 一两分钟后更新线上页面。", fail: "保存失败：", upl: "图片上传中……", link: "链接地址：", sure: "删除这一条？",
-        parent: "选上一层", reset: "复位", w4: "一行4张", w3: "一行3张", w2: "一行2张", w1: "整行", below: "文字放图下面", side: "文字放图右边", tip: "长按任意板块中间可以拖动位置；拖它的边和角可以改大小。" };
+        translated: "页面正处于浏览器翻译状态，请先切回显示原文再保存。这次没有保存。", parent: "选上一层", reset: "复位", w4: "一行4张", w3: "一行3张", w2: "一行2张", w1: "整行", below: "文字放图下面", side: "文字放图右边", tip: "长按任意板块中间可以拖动位置；拖它的边和角可以改大小。" };
   const PAGE = location.pathname.endsWith("en.html") ? "en.html" : "index.html";
   const LOCAL_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && location.search.includes("edtest");
   const token = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
@@ -80,7 +80,8 @@
       const k = Math.min(1, 1600 / Math.max(img.width, img.height));
       const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      res(c.toDataURL("image/jpeg", 0.85));
+      // PNG、WebP、GIF 可能有透明底，保留 PNG；转成 JPG 透明部分会变黑
+      res(c.toDataURL(/png|webp|gif/.test(file.type) ? "image/png" : "image/jpeg", 0.85));
     };
     img.onerror = rej; img.src = URL.createObjectURL(file);
   });
@@ -93,7 +94,7 @@
     const data = await compress(file);
     img.src = data;
     const name = file.name.replace(/\.[^.]+$/, "").replace(/[^\w-]+/g, "-").slice(0, 40) || "img";
-    const path = `assets/uploads/${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36)}-${name}.jpg`;
+    const path = `assets/uploads/${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36)}-${name}.${data.startsWith("data:image/png") ? "png" : "jpg"}`;
     img.dataset.edSrc = path;
     if (!img.alt) img.alt = file.name;
     if (LOCAL_TEST) { msg("（本机测试，未上传）" + path); return; }
@@ -256,10 +257,18 @@
     const root = document.querySelector("main").cloneNode(true);
     root.querySelectorAll("[data-editor-ui], [data-runtime]").forEach(e => e.remove());
     root.querySelectorAll("[contenteditable]").forEach(e => { e.removeAttribute("contenteditable"); e.removeAttribute("spellcheck"); });
+    root.querySelectorAll(".easyScholarDOI").forEach(e => e.remove()); // 浏览器插件塞进页面的东西
+    root.querySelectorAll("[data-sg-checked]").forEach(e => e.removeAttribute("data-sg-checked"));
     root.querySelectorAll("img[data-ed-src]").forEach(i => { i.setAttribute("src", i.dataset.edSrc); i.removeAttribute("data-ed-src"); });
     root.querySelectorAll("[style=\"\"]").forEach(e => e.removeAttribute("style"));
     const r = root.querySelector("#retro"); if (r) r.innerHTML = "";
     return root.outerHTML;
+  };
+  // 浏览器翻译会直接改页面文字，这时保存会把译文存进网站
+  const isTranslated = () => {
+    const root = document.documentElement, lang = root.lang.toLowerCase();
+    return root.classList.contains("translated-ltr") || root.classList.contains("translated-rtl")
+      || !lang.startsWith(PAGE === "en.html" ? "en" : "zh") || !!document.querySelector("main font");
   };
   const serialize = async () => {
     const src = LOCAL_TEST ? await (await fetch(location.pathname, { cache: "no-store" })).text()
@@ -278,6 +287,7 @@
     } else {
       bar.append(
         btn(T.save, async () => {
+          if (isTranslated()) { msg(T.translated, 8000); return; }
           msg(T.saving, 0);
           try {
             const html = await serialize();
