@@ -257,7 +257,7 @@
     const root = document.querySelector("main").cloneNode(true);
     root.querySelectorAll("[data-editor-ui], [data-runtime]").forEach(e => e.remove());
     root.querySelectorAll("[contenteditable]").forEach(e => { e.removeAttribute("contenteditable"); e.removeAttribute("spellcheck"); });
-    root.querySelectorAll(".easyScholarDOI").forEach(e => e.remove()); // 浏览器插件塞进页面的东西
+    root.querySelectorAll(".easyScholarDOI, .sciapp-iconbtn").forEach(e => e.remove()); // 浏览器插件塞进页面的东西
     root.querySelectorAll("[data-sg-checked]").forEach(e => e.removeAttribute("data-sg-checked"));
     root.querySelectorAll("img[data-ed-src]").forEach(i => { i.setAttribute("src", i.dataset.edSrc); i.removeAttribute("data-ed-src"); });
     root.querySelectorAll("[style=\"\"]").forEach(e => e.removeAttribute("style"));
