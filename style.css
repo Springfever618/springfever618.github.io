@@ -97,6 +97,7 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: 
 .list li:last-child { border-bottom: 1px solid var(--line); }
 .list time { color: var(--accent); font-weight: 600; white-space: nowrap; }
 .video { margin-top: 12px; max-width: 640px; }
+.pub-img { display: block; width: 100%; max-width: 640px; height: auto; margin-top: 12px; }
 .video-link { display: inline-block; margin-top: 8px; font-size: 13px; }
 .video video { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 562; background: #000; }
 
