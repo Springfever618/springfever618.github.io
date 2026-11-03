@@ -51,9 +51,20 @@ const prev = mkBtn("pager-btn pager-prev", "‹", EN ? "Previous" : "上一页",
 const next = mkBtn("pager-btn pager-next", "›", EN ? "Next" : "下一页", () => go(current() + 1));
 document.body.append(prev, next);
 
+// 左侧导航（11-03）：宽屏时在左边列出各板块，用板块标题全称，和顶部导航同步高亮
+const side = runtime(document.createElement("aside"));
+side.className = "side-nav"; side.setAttribute("aria-label", EN ? "Sections" : "板块导航");
+side.innerHTML = pages.map(p => {
+  const h = p.querySelector("h2"), no = h?.querySelector("span")?.textContent || "";
+  const name = h ? h.textContent.replace(no, "").trim() : navLinks.find(a => a.getAttribute("href") === "#" + p.id)?.textContent || p.id;
+  return `<a href="#${p.id}"><span>${no || "00"}</span>${name}</a>`;
+}).join("");
+document.body.append(side);
+const sideLinks = [...side.querySelectorAll("a")];
+
 const mark = () => {
   const i = current(), id = pages[i]?.id;
-  navLinks.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+  [...navLinks, ...sideLinks].forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
   const act = navLinks.find(a => a.classList.contains("active")); if (act) act.parentElement.scrollTo({ left: act.offsetLeft - 40, behavior: "smooth" });
   prev.disabled = i === 0; next.disabled = i === pages.length - 1;
   if (id && location.hash !== "#" + id && location.hash !== "#edit") history.replaceState(null, "", "#" + id);
@@ -64,7 +75,7 @@ document.addEventListener("click", e => {
   const a = e.target.closest("a[href^='#']"); if (!a) return;
   const h = a.getAttribute("href"), i = h === "#" ? 0 : pages.findIndex(p => "#" + p.id === h);
   if (i < 0 || (document.body.classList.contains("ed-on") && a.closest("main"))) return;
-  e.preventDefault(); go(i, !a.closest("nav")); // 顶部导航直接切页，箭头和圆点保留滑动
+  e.preventDefault(); go(i, !a.closest("nav, .side-nav")); // 顶部和左侧导航直接切页，箭头和圆点保留滑动
 });
 document.addEventListener("keydown", e => {
   const t = e.target;

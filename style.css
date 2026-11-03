@@ -58,6 +58,20 @@ nav a.active { color: var(--text); font-weight: 600; }
 .pager-btn:hover { opacity: 1; }
 .pager-btn[disabled] { opacity: .2; cursor: default; }
 .pager-prev { left: 16px; } .pager-next { right: 16px; }
+/* 左侧导航（11-03）：只在够宽的屏幕显示，板块内容相应右移，不和导航重叠 */
+.side-nav { display: none; }
+@media (min-width: 1200px) {
+  .side-nav { display: flex; flex-direction: column; gap: 2px; position: fixed; left: 32px; top: 132px; z-index: 20; width: 168px; }
+  .side-nav a { display: flex; gap: 10px; align-items: baseline; padding: 5px 0 5px 12px; border-left: 2px solid var(--line);
+    color: var(--muted); font-size: 14px; line-height: 1.5; text-decoration: none; }
+  .side-nav a span { font-size: 12px; font-weight: 600; color: var(--accent); opacity: .6; }
+  .side-nav a:hover { color: var(--text); }
+  .side-nav a.active { color: var(--text); font-weight: 600; border-left-color: var(--text); }
+  .side-nav a.active span { opacity: 1; }
+  main > section { padding-left: max(240px, calc((100% - 960px) / 2)); }
+  .pager-prev { left: auto; right: 64px; }
+}
+html.intro .side-nav { visibility: hidden; }
 .footnote { margin-top: 48px; color: var(--muted); font-size: 13px; }
 .eyebrow { color: var(--accent); font-size: 14px; letter-spacing: .08em; margin: 0; }
 h1 small { font-family: var(--sans); font-size: .4em; font-weight: 500; color: var(--muted); margin-left: .3em; }
